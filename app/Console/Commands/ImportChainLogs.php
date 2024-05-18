@@ -12,14 +12,14 @@ class ImportChainLogs extends Command
 {
     protected $signature = 'app:import-chain-logs';
 
-    protected int $interval = 720; // 12 hours
+    protected int $interval = 720 * 10; // 12 hours
 
     public function handle()
     {
         $configTimestamp = Config::firstOrCreate([
             'key' => 'last_chain_update',
         ], [
-            'value' => '1710608400',
+            'value' => '1715407306',
         ]);
 
         $lastChainUpdate = Carbon::createFromTimestamp(
@@ -38,15 +38,17 @@ class ImportChainLogs extends Command
                 'to' => $nextChainUpdate->getTimestamp(),
             ]);
 
-            if ($response->ok() && isset($response->json()['chains'])) {
-                collect($response->json()['chains'])
-                    ->each(function (array $chain, string $id) {
-                        Chain::updateOrCreate([
-                            'chain_id' => $id,
-                        ], array_merge([
-                            'chain_id' => $id,
-                        ], $chain));
-                    });
+            if ($response->ok()) {
+                if (isset($response->json()['chains'])) {
+                    collect($response->json()['chains'])
+                        ->each(function (array $chain, string $id) {
+                            Chain::updateOrCreate([
+                                'chain_id' => $id,
+                            ], array_merge([
+                                'chain_id' => $id,
+                            ], $chain));
+                        });
+                }
             } else {
                 dd(
                     $response,
