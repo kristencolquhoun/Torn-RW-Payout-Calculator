@@ -33,21 +33,38 @@ class RankedWarPointsExport implements FromArray, WithHeadings
 
         $this->chains = Chain::all();
 
-        $this->members = $this->attacks->where('attacker_faction', env('TORN_FACTION_ID'))
-            ->groupBy('attacker_id')
-            ->map(fn ($attack) => [
-                'user' => $attack->first()->attacker_name . ' [' . $attack->first()->attacker_id . ']',
-                'war_attacks' => 0,
-                'war_losses' => 0,
-                'war_assists' => 0,
-                'war_retaliations' => 0,
-                'war_mugs' => 0,
-                'chain_attacks' => 0,
-                'chain_assists' => 0,
-                'chain_mugs' => 0,
-                'friendly_hits' => 0,
-                'friendly_loss' => 0,
-            ])->toArray();
+        $this->members = $this->attacks
+            ->filter(function (Attack $attack) {
+                return in_array(env('TORN_FACTION_ID'), [
+                    $attack->attacker_faction,
+                    $attack->defender_faction
+                ]);
+            })
+            ->unique(function (Attack $attack) {
+                if ($attack->attacker_faction == env('TORN_FACTION_ID')) {
+                    return $attack->attacker_id;
+                }
+
+                return $attack->defender_id;
+            })
+            ->mapWithKeys(function (Attack $attack) {
+                $id = $attack->attacker_faction == env('TORN_FACTION_ID') ? $attack->attacker_id : $attack->defender_id;
+                $name = $attack->attacker_faction == env('TORN_FACTION_ID') ? $attack->attacker_name : $attack->defender_name;
+
+                return [$id => [
+                    'user' => $name . ' [' . $id . ']',
+                    'war_attacks' => 0,
+                    'war_losses' => 0,
+                    'war_assists' => 0,
+                    'war_retaliations' => 0,
+                    'war_mugs' => 0,
+                    'chain_attacks' => 0,
+                    'chain_assists' => 0,
+                    'chain_mugs' => 0,
+                    'friendly_hits' => 0,
+                    'friendly_loss' => 0,
+                ]];
+            })->toArray();
     }
 
     public function array(): array
@@ -73,6 +90,10 @@ class RankedWarPointsExport implements FromArray, WithHeadings
                             $this->members[$attack->attacker_id]['war_mugs']++;
                             break;
                         case 'Lost':
+                        case 'Stalemate':
+                        case 'Timeout':
+                        case 'Interrupted':
+                        case 'Escape':
                             break;
                         default:
                             dd('MISSING ATTACK #1', $attack);
