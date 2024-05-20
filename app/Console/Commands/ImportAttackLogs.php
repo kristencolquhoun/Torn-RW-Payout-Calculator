@@ -13,15 +13,17 @@ class ImportAttackLogs extends Command
 {
     protected $signature = 'app:import-attack-logs';
 
-    protected int $interval = 30; // 1/2 hour
+    protected int $interval = 30 * 1;
 
     public function handle()
     {
         $configTimestamp = Config::firstOrCreate([
             'key' => 'last_attack_update',
         ], [
-            'value' => '1710608400',
+            'value' => '17154073060',
         ]);
+
+        dump($configTimestamp);
 
         $lastAttackUpdate = Carbon::createFromTimestamp(
             $configTimestamp->value
@@ -46,7 +48,7 @@ class ImportAttackLogs extends Command
                             ['attack_id' => $id],
                             array_merge(
                                 ['attack_id' => $id],
-                                Arr::except($attack, ['code'])
+                                Arr::where(Arr::except($attack, ['code']), fn ($value) => is_array($value) || strlen($value))
                             )
                         );
                     });
@@ -54,6 +56,7 @@ class ImportAttackLogs extends Command
                 dd(
                     $response,
                     $response->json(),
+                    $configTimestamp->value
                 );
             }
 
