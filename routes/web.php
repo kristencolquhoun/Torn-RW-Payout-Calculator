@@ -15,9 +15,13 @@ Route::get('/', function () {
 });
 
 Route::get('/attacks', function () {
-    dump(Attack::count());
+    dump($start = Attack::count());
     Artisan::call(ImportAttackLogs::class);
-    dump(Attack::count());
+    dump($end = Attack::count());
+
+    if ($start === $end - 100) {
+        dd('STOP REVERSE');
+    }
 });
 
 Route::get('/chains', function () {
